@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Personas</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f3f3f3;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form, table {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        button {
+            padding: 6px 12px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .btn-eliminar {
+            background: #d9534f;
+            color: white;
+        }
+
+        .btn-editar {
+            background: #f0ad4e;
+            color: white;
+            margin-right: 5px;
+        }
+
+        .btn-descargar {
+            background: #0275d8;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Registro de Personas (Versión Estática con Modificar)</h1>
+
+<!-- FORMULARIO -->
+<form id="formRegistro">
+    <input type="hidden" id="editIndex">
+
+    <label>Nombre:</label><br>
+    <input type="text" id="nombre" required><br><br>
+
+    <label>País:</label><br>
+    <select id="pais" required></select><br><br>
+
+    <button type="submit" id="btnEnviar">Registrar</button>
+</form>
+
+<!-- TABLA -->
+<table>
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>País</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody id="tablaPersonas"></tbody>
+</table>
+
+<!-- BOTÓN CSV -->
+<button class="btn-descargar" onclick="descargarCSV()">Descargar CSV</button>
+
+<script>
+// Lista local en memoria (dura mientras la página esté abierta)
+let personas = [];
+
+// 1️⃣ Cargar países desde API externa
+fetch("https://restcountries.com/v2/all?fields=name")
+    .then(res => res.json())
+    .then(data => {
+        let paises = data.map(p => p.name).sort();
+        let select = document.getElementById("pais");
+
+        paises.forEach(p => {
+            let opt = document.createElement("option");
+            opt.value = p;
+            opt.textContent = p;
+            select.appendChild(opt);
+        });
+    });
+
+// 2️⃣ Registrar o Modificar
+document.getElementById("formRegistro").addEventListener("submit", e => {
+    e.preventDefault();
+
+    let nombre = document.getElementById("nombre").value.toUpperCase();
+    let pais = document.getElementById("pais").value;
+    let index = document.getElementById("editIndex").value;
+
+    if (index === "") {
+        // Registro normal
+        personas.push({ nombre, pais });
+    } else {
+        // Modificación
+        personas[index] = { nombre, pais };
+    }
+
+    // Resetear formulario
+    document.getElementById("formRegistro").reset();
+    document.getElementById("editIndex").value = "";
+    document.getElementById("btnEnviar").textContent = "Registrar";
+
+    mostrarTabla();
+});
+
+// 3️⃣ Mostrar tabla
+function mostrarTabla() {
+    let tbody = document.getElementById("tablaPersonas");
+    tbody.innerHTML = "";
+
+    personas.forEach((p, index) => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${p.nombre}</td>
+                <td>${p.pais}</td>
+                <td>
+                    <button class="btn-editar" onclick="editar(${index})">Editar</button>
+                    <button class="btn-eliminar" onclick="eliminar(${index})">Eliminar</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// 4️⃣ Eliminar
+function eliminar(index) {
+    personas.splice(index, 1);
+    mostrarTabla();
+}
+
+// 5️⃣ Editar (Carga datos en el formulario)
+function editar(index) {
+    let persona = personas[index];
+
+    document.getElementById("nombre").value = persona.nombre;
+    document.getElementById("pais").value = persona.pais;
+    document.getElementById("editIndex").value = index;
+
+    document.getElementById("btnEnviar").textContent = "Guardar Cambios";
+}
+
+// 6️⃣ Descargar CSV
+function descargarCSV() {
+    let contenido = "Nombre,País\n";
+
+    personas.forEach(p => {
+        contenido += `${p.nombre},${p.pais}\n`;
+    });
+
+    let blob = new Blob(["\ufeff" + contenido], { type: "text/csv;charset=utf-8;" });
+    let url = URL.createObjectURL(blob);
+
+    let link = document.createElement("a");
+    link.href = url;
+    link.download = "personas.csv";
+    link.click();
+}
+</script>
+
+</body>
+</html>
